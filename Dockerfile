@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 COPY resources ./resources
+COPY static ./static
 COPY scripts/start.sh /usr/local/bin/start.sh
 
 RUN chmod +x /usr/local/bin/start.sh \
