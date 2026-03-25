@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8"?>
+ 
+<!--
+  Copyright 2016, 2017, Michael Büchner <m.buechner@dnb.de>
+  Deutsche Digitale Bibliothek
+  c/o Deutsche Nationalbibliothek
+  Informationsinfrastruktur
+  Adickesallee 1, D-60322 Frankfurt am Main 
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+    
+  Version: 2017-05-10
+  - Element org:europeanaDisplayName entfernt (Francesca Schulze)
+  
+  Version: 2017-05-10 (2)
+  - description vom Typ xs:string
+  - Regexp bei Rufnummern angepasst
+  - lang-Attribute überprüft
+  
+  Version: 2018-03-13
+  - Regexp bei fax und telephon auskommentiert
+  - Attribut uri bei country, state und city ist nun verpflichtend
+  - RegEx für pid (ISIL) eingefügt 
+  - RegEx für Twitter, Instagram und Facebook überarbeitet
+  
+  Version: 2018-04-09
+  - RegEx für pid (ISIL) angepasst (https://w3id.org/isil/...)
+  
+-->
+  
+<xs:schema elementFormDefault="qualified" targetNamespace="http://www.deutsche-digitale-bibliothek.de/ns/organization" xmlns:org="http://www.deutsche-digitale-bibliothek.de/ns/organization" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="organization" type="org:organization">
+    <xs:unique name="uniqueDescriptionLang">
+      <xs:selector xpath="org:description"/>
+      <xs:field xpath="@lang"/>
+    </xs:unique>
+    <xs:unique name="uniqueAbbreviationLang">
+      <xs:selector xpath="org:abbreviation"/>
+      <xs:field xpath="@lang"/>
+    </xs:unique>
+    <xs:unique name="uniqueDisplayNameLang">
+      <xs:selector xpath="org:displayName"/>
+      <xs:field xpath="@lang"/>
+    </xs:unique>
+  </xs:element>
+  <xs:complexType name="organization">
+    <xs:sequence>
+      <xs:element maxOccurs="1" minOccurs="1" name="created" type="xs:dateTime">
+        <xs:annotation>
+          <xs:documentation>Date/timestamp for the creation of the record in the DDB registration</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="1" name="creatorId" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>DDB-internal ID of the record creator</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="1" name="modified" type="xs:dateTime">
+        <xs:annotation>
+          <xs:documentation>Date/timestamp for the modification of the record in the DDB registration</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="1" name="modifierId" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>DDB-internal ID of the record modifier</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="1" name="status">
+        <xs:annotation>
+          <xs:documentation>Record release status. Value must be "approved". </xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="approved"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="1" name="recordType">
+        <xs:annotation>
+          <xs:documentation>The type of organization registered in the DDB. Values are: "ddb-institution" and "ddb-aggregator"</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="ddb-institution"/>
+            <xs:enumeration value="ddb-aggregator"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="1" name="id" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>Internal DDB-ID for the registered organization</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="orgParent" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>DDB-internal ID of the superordinate institution</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="pid">
+        <xs:annotation>
+          <xs:documentation>The "Internal Standard Identifier for Institutions and Related Organizations" registered by the German ISIL- and Library Codes Agency at the Staatsbibliothek zu Berlin (http://sigel.staatsbibliothek-berlin.de/). Values are http-URIs taken from the Linked Data Service of the German National
+            Library</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:anyURI">
+            <xs:pattern value="(http://ld.zdb-services.de/resource/organisations/|http://w3id.org/isil/)(\D{1,4}\-[A-Za-z\-0-9:]{1,11})"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="authorityId" type="xs:anyURI">
+        <xs:annotation>
+          <xs:documentation>The German Authority File http-URI of the organization</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="unbounded" minOccurs="1" name="displayName">
+        <xs:annotation>
+          <xs:documentation>The preferred form of name of the organization used for presentation in the DDB portal (http://www.deutsche-digitale-bibliothek.de)</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:string">
+              <xs:attribute name="lang" type="xs:language" use="required"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element maxOccurs="unbounded" minOccurs="0" name="abbreviation">
+        <xs:annotation>
+          <xs:documentation>The acronym (or abbreviated form of an organzation's name) that is commonly used to identify the registered organization</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:string">
+              <xs:attribute name="lang" type="xs:language" use="required"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="1" name="sector">
+        <xs:annotation>
+          <xs:documentation>The sector in which the organization operates. Values are http-URIs taken from the DDB vocabulary http://ddb.vocnet.org/sparte/</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:anyURI">
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte001"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte002"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte003"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte004"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte005"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte006"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte007"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="subsector">
+        <xs:annotation>
+          <xs:documentation>A specification of the sector in which the organization operates. Values are http-URIs taken from the DDB vocabulary http://ddb.vocnet.org/sparte/</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:anyURI">
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte016"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte014"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte012"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte011"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte010"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte015"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte017"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte009"/>
+            <xs:enumeration value="http://ddb.vocnet.org/sparte/sparte013"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element maxOccurs="unbounded" minOccurs="0" name="description">
+        <xs:annotation>
+          <xs:documentation>A description of the organziation</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:string">
+              <xs:attribute name="lang" type="xs:language" use="required"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="fundingAgency">
+        <xs:annotation>
+          <xs:documentation>The funding agency of the organization</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:string"> </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="legalStatus">
+        <xs:annotation>
+          <xs:documentation>Legal status of the organization</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:string"/>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="1" name="address" type="org:address"/>
+      <xs:element maxOccurs="1" minOccurs="0" name="email" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>An email address for the organisation, e.g. for a help/information desk for an organization</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="url" type="xs:anyURI">
+        <xs:annotation>
+          <xs:documentation>The URL for the homepage of the organization</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="logo" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>Logo of the organization</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="telephone">
+        <xs:annotation>
+          <xs:documentation>An official telephone number of the organization, e.g. the number of the switchboard or for a help/information desk for an organization</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <!-- wird später umgesetzt -->
+            <!-- <xs:pattern value="(\+[1-9][0-9]{0,3})(\s[1-9][0-9]*)(\s[0-9]+)(\-[0-9]+)?"/> -->
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element form="qualified" maxOccurs="1" minOccurs="0" name="fax">
+        <xs:annotation>
+          <xs:documentation>An official fax number of the organization</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <!-- wird später umgesetzt -->
+            <!-- <xs:pattern value="(\+[1-9][0-9]{0,3})(\s[1-9][0-9]*)(\s[0-9]+)(\-[0-9]+)?"/>  -->
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="facebook">
+        <xs:annotation>
+          <xs:documentation>The URL for an official Facebook account of the organization</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:anyURI">
+            <xs:pattern value="(https://www.facebook.com/)([A-Za-zА-Яа-яёäöüßЁ0-9.-]+)"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="twitter">
+        <xs:annotation>
+          <xs:documentation>The URL for an official twitter account of the organization</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:anyURI">
+            <xs:pattern value="(https://twitter.com/)([A-Za-z0-9_]{1,15})"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="instagram">
+        <xs:annotation>
+          <xs:documentation>The URL for an official Instagram account of the organization</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:anyURI">
+            <xs:pattern value="(https://www.instagram.com/)([a-z0-9_\.]{1,30})"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="bookmarkListId" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>The identifier for a bookmark list in the DDB portal (http://www.deutsche-digitale-bibliothek.de)</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="address">
+    <xs:all>
+      <xs:element maxOccurs="1" minOccurs="1" name="street" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>Street name</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="houseIdentifier" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>House number as part of the organization's address</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="addressSupplement">
+        <xs:annotation>
+          <xs:documentation>Supplement to the organization's address</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:string"> </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="1" name="postalCode">
+        <xs:annotation>
+          <xs:documentation>Postal code</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <!-- Pattern wurde angepasst: z.B. I-00187, 1000 -->
+            <xs:pattern value="([A-Z]\-)?[0-9]{4,5}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="city" type="org:geonames_type">
+        <xs:annotation>
+          <xs:documentation>City name as part of the address</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="state" type="org:geonames_type">
+        <xs:annotation>
+          <xs:documentation>The state as part of the address. Values are http-URIs taken from Geonames ISO Subentity Codes for Germany (http://sws.geonames.org/DE/administrative-division-germany.html)</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="1" name="country" type="org:geonames_type">
+        <xs:annotation>
+          <xs:documentation>The country as part of the address. Values are http-URIs taken from Geonames Country Codes (http://sws.geonames.org/countries/)</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="1" name="coordinates" type="org:coordinates">
+        <xs:annotation>
+          <xs:documentation>WGS84 coordinates</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="0" name="locationDisplayName" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>Street name, postal code, city</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="coordinates">
+    <xs:all>
+      <xs:element maxOccurs="1" minOccurs="1" name="latitude" type="xs:double">
+        <xs:annotation>
+          <xs:documentation>WGS84 latitude coordinate</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element maxOccurs="1" minOccurs="1" name="longitude" type="xs:double">
+        <xs:annotation>
+          <xs:documentation>WGS84 longitude coordinate</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="geonames_type">
+    <xs:sequence>
+      <xs:element maxOccurs="unbounded" minOccurs="0" name="label">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:string">
+              <xs:attribute name="lang" use="required">
+                <xs:simpleType>
+                  <xs:restriction base="xs:language">
+                    <xs:enumeration value="deu"/>
+                    <xs:enumeration value="eng"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:attribute>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="uri" type="xs:anyURI" use="required"/>
+  </xs:complexType>
+</xs:schema>

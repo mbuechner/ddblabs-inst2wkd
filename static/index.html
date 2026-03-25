@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DDB XML Compare</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-1: #f5f8fc;
+      --bg-2: #e9f0fa;
+      --card: #ffffff;
+      --ink: #0d1b2a;
+      --accent: #0a4f8a;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 700px at 0% 0%, #d9e8fb 0%, transparent 60%),
+        radial-gradient(900px 600px at 100% 100%, #dce9f5 0%, transparent 55%),
+        linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    }
+
+    .page-wrap {
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .panel {
+      width: min(1400px, 100%);
+      background: var(--card);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(17, 56, 93, 0.12);
+      border: 1px solid rgba(10, 79, 138, 0.1);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 1.25rem 1.5rem;
+      background: linear-gradient(90deg, #f8fbff, #eef5fc);
+      border-bottom: 1px solid rgba(10, 79, 138, 0.1);
+    }
+
+    .panel-header h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .panel-body {
+      padding: 1.25rem;
+    }
+
+    textarea.codebox {
+      min-height: 340px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.87rem;
+      line-height: 1.35;
+      white-space: pre;
+      border: 1px solid #ced8e5;
+      border-radius: 10px;
+      background: #fbfdff;
+    }
+
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #1d3557;
+    }
+
+    #diffOutput {
+      overflow: auto;
+    }
+
+    .d2h-wrapper {
+      border: 1px solid #ced8e5;
+      border-radius: 10px;
+      background: #fff;
+      padding: 0.5rem;
+    }
+
+    .status {
+      min-height: 1.25rem;
+      font-size: 0.9rem;
+      color: #234;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+    <div class="panel">
+      <div class="panel-header">
+        <h1>Wikidata zu DDB XML Vergleich</h1>
+      </div>
+      <div class="panel-body">
+        <form id="loadForm" class="row justify-content-center mb-3">
+          <div class="col-12 col-md-8 col-lg-7">
+            <div class="input-group input-group-lg">
+              <div class="position-relative flex-grow-1">
+                <input id="identifier" type="text" class="form-control form-control-lg pe-5 rounded-end-0" placeholder="Q130756596 oder DDB-ID" required>
+                <button id="clearIdentifier" type="button" aria-label="Eingabe löschen" class="btn btn-sm btn-outline-secondary rounded-circle position-absolute top-50 end-0 translate-middle-y me-2 p-0 d-none" style="width:1.5rem;height:1.5rem;line-height:1">&times;</button>
+              </div>
+              <button id="submitBtn" type="submit" class="btn btn-primary">Laden</button>
+            </div>
+            <div class="small text-secondary text-truncate mt-1" title="Beispiele: Klick setzt den Wert ins Eingabefeld">
+              Beispiele:
+              <a class="example-id link-secondary text-decoration-none" data-value="2Q37XY5KXJNJE5MV6SWP3UKKZ6RSBLK5" href="#">DNB</a> |
+              <a class="example-id link-secondary text-decoration-none" data-value="XYMQPA4OHAYDDFYWHV6Q4RFUIISTLQJV" href="#">LABW</a> |
+              <a class="example-id link-secondary text-decoration-none" data-value="Z3C5F6OSJ7T2RXD6RH3CQSJZISFAIMZH" href="#">DAM</a> |
+              <a class="example-id link-secondary text-decoration-none" data-value="4HYDA3GLAFDI5RL4YZDMXTA5UVGNXO7N" href="#">DFF</a>
+            </div>
+          </div>
+        </form>
+
+        <div id="status" class="status mb-3"></div>
+
+        <div class="row g-3">
+          <div class="col-12 col-lg-6">
+            <div class="section-title">Transformiertes XML (Service)</div>
+            <textarea id="leftXml" class="form-control codebox" spellcheck="false" readonly></textarea>
+          </div>
+          <div class="col-12 col-lg-6">
+            <div class="section-title">DDB Source XML</div>
+            <textarea id="rightXml" class="form-control codebox" spellcheck="false" readonly></textarea>
+          </div>
+        </div>
+
+        <div id="diffOutput"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/diff@5.2.0/dist/diff.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js"></script>
+  <script>
+    const IDENTIFIER_STORAGE_KEY = "ddb-xml-compare.identifier";
+
+    function showStatus(message, isError) {
+      const el = $("#status");
+      el.text(message || "");
+      el.css("color", isError ? "#b42318" : "#234");
+    }
+
+    function resetView() {
+      $("#leftXml").val("");
+      $("#rightXml").val("");
+      $("#diffOutput").html("");
+      showStatus("", false);
+    }
+
+    function toggleClearButton() {
+      const hasValue = $("#identifier").val().trim().length > 0;
+      $("#clearIdentifier").toggleClass("d-none", !hasValue);
+    }
+
+    function isDdbId(value) {
+      return /^(?:[A-Z2-7]{8})*(?:[A-Z2-7]{2}={6}|[A-Z2-7]{4}={4}|[A-Z2-7]{5}={3}|[A-Z2-7]{7}=)?$/.test(value);
+    }
+
+    async function loadTransformed(identifier) {
+      const resp = await fetch(`/organization/${encodeURIComponent(identifier)}`);
+      const body = await resp.text();
+      if (!resp.ok) {
+        throw new Error(`Transform-API: ${body}`);
+      }
+      return body;
+    }
+
+    async function loadDdbSource(identifier) {
+      const resp = await fetch(`/source/${encodeURIComponent(identifier)}`);
+      const body = await resp.text();
+      if (!resp.ok) {
+        throw new Error(`DDB-API: ${body}`);
+      }
+      return body;
+    }
+
+    function renderDiff(left, right) {
+      if (!left.trim() && !right.trim()) {
+        $("#diffOutput").html("");
+        return;
+      }
+
+      const patch = Diff.createTwoFilesPatch(
+        "transformiert.xml",
+        "ddb-source.xml",
+        left,
+        right,
+        "",
+        "",
+        { context: 3 }
+      );
+      const html = Diff2Html.html(patch, {
+        drawFileList: false,
+        matching: "lines",
+        outputFormat: "side-by-side"
+      });
+      $("#diffOutput").html(html);
+    }
+
+    $("#identifier").on("input", function () {
+      const value = $(this).val().trim();
+      if (value) {
+        localStorage.setItem(IDENTIFIER_STORAGE_KEY, value);
+      } else {
+        localStorage.removeItem(IDENTIFIER_STORAGE_KEY);
+      }
+      toggleClearButton();
+    });
+
+    $("#clearIdentifier").on("click", function () {
+      $("#identifier").val("").trigger("input").focus();
+    });
+
+    $(".example-id").on("click", function (event) {
+      event.preventDefault();
+      const value = ($(this).data("value") || "").toString().trim();
+      $("#identifier").val(value).trigger("input").focus();
+    });
+
+    $("#loadForm").on("submit", async function (event) {
+      event.preventDefault();
+      resetView();
+
+      const identifier = $("#identifier").val().trim();
+      if (!identifier) {
+        return;
+      }
+
+      const button = $("#submitBtn");
+      button.prop("disabled", true).text("Lade...");
+      showStatus("Lade Daten...", false);
+
+      try {
+        const transformed = await loadTransformed(identifier);
+        $("#leftXml").val(transformed);
+
+        if (isDdbId(identifier)) {
+          const ddbXml = await loadDdbSource(identifier);
+          $("#rightXml").val(ddbXml);
+        } else {
+          $("#rightXml").val("");
+        }
+
+        renderDiff($("#leftXml").val(), $("#rightXml").val());
+        showStatus("Fertig", false);
+      } catch (error) {
+        showStatus(error.message || String(error), true);
+      } finally {
+        button.prop("disabled", false).text("Laden");
+      }
+    });
+
+    $(function () {
+      const savedIdentifier = localStorage.getItem(IDENTIFIER_STORAGE_KEY);
+      if (savedIdentifier) {
+        $("#identifier").val(savedIdentifier);
+      }
+      toggleClearButton();
+    });
+  </script>
+</body>
+</html>
