@@ -6,7 +6,6 @@ from typing import Any
 
 from lxml import etree
 
-DDB_NS = "http://www.deutsche-digitale-bibliothek.de/ns/organization"
 LANG_MAP = {
     "de": "deu",
     "en": "eng",

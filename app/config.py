@@ -26,9 +26,6 @@ class Settings:
 
         self.wikidata_sparql_url = os.getenv("WIKIDATA_SPARQL_URL", "https://query.wikidata.org/sparql")
         self.wikidata_api_url = os.getenv("WIKIDATA_API_URL", "https://www.wikidata.org/w/api.php")
-        self.wikidata_client_id = os.getenv("WIKIDATA_CLIENT_ID", "")
-        self.wikidata_client_secret = os.getenv("WIKIDATA_CLIENT_SECRET", "")
-        self.wikidata_access_token = os.getenv("WIKIDATA_ACCESS_TOKEN", "")
 
         self.ddb_api_url = os.getenv("DDB_API_URL", "https://api.deutsche-digitale-bibliothek.de/2")
 

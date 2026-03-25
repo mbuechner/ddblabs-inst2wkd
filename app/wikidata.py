@@ -22,10 +22,6 @@ def _wikidata_headers(accept: str | None = None) -> dict[str, str]:
     headers: dict[str, str] = {"User-Agent": USER_AGENT}
     if accept:
         headers["Accept"] = accept
-
-    token = settings.wikidata_access_token.strip()
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
     return headers
 
 

@@ -40,17 +40,7 @@ CLIENT_CONTACT=you@example.org
 # Wikidata endpoints
 WIKIDATA_SPARQL_URL=https://query.wikidata.org/sparql
 WIKIDATA_API_URL=https://www.wikidata.org/w/api.php
-
-# Optional outbound credentials for Wikidata requests
-WIKIDATA_CLIENT_ID=
-WIKIDATA_CLIENT_SECRET=
-WIKIDATA_ACCESS_TOKEN=
 ```
-
-Wichtig zur Zuordnung:
-- `WIKIDATA_CLIENT_ID`, `WIKIDATA_CLIENT_SECRET`, `WIKIDATA_ACCESS_TOKEN`: Zugangsdaten fuer ausgehende Requests an Wikidata.
-
-Wenn `WIKIDATA_ACCESS_TOKEN` gesetzt ist, wird es als `Authorization: Bearer ...` bei SPARQL- und API-Requests mitgeschickt.
 
 Der ausgehende `User-Agent` wird im Format gebaut:
 
