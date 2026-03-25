@@ -100,7 +100,7 @@
   <div class="page-wrap">
     <div class="panel">
       <div class="panel-header">
-        <h1>Wikidata zu DDB XML Vergleich</h1>
+        <h1>XML-Vergleich: Wikidata-/DDB-Metadaten</h1>
       </div>
       <div class="panel-body">
         <form id="loadForm" class="row justify-content-center mb-3">
@@ -127,10 +127,16 @@
         <div class="row g-3">
           <div class="col-12 col-lg-6">
             <div class="section-title">Transformiertes XML (Service)</div>
+            <div class="small mb-1">
+              <a id="wikidataLink" class="link-primary text-decoration-none d-none" href="#" target="_blank" rel="noopener noreferrer"></a>
+            </div>
             <textarea id="leftXml" class="form-control codebox" spellcheck="false" readonly></textarea>
           </div>
           <div class="col-12 col-lg-6">
             <div class="section-title">DDB Source XML</div>
+            <div class="small mb-1">
+              <a id="ddbPortalLink" class="link-primary text-decoration-none d-none" href="#" target="_blank" rel="noopener noreferrer"></a>
+            </div>
             <textarea id="rightXml" class="form-control codebox" spellcheck="false" readonly></textarea>
           </div>
         </div>
@@ -157,7 +163,31 @@
       $("#leftXml").val("");
       $("#rightXml").val("");
       $("#diffOutput").html("");
+      $("#wikidataLink").addClass("d-none").attr("href", "#").text("");
+      $("#ddbPortalLink").addClass("d-none").attr("href", "#").text("");
       showStatus("", false);
+    }
+
+    function extractTagValue(xmlText, tagName) {
+      const regex = new RegExp(`<${tagName}>([^<]+)</${tagName}>`);
+      const match = xmlText.match(regex);
+      return match ? match[1].trim() : "";
+    }
+
+    function updateReferenceLinks(identifier, transformedXml) {
+      const wkdId = extractTagValue(transformedXml, "org:wkdId") || extractTagValue(transformedXml, "wkdId");
+      if (wkdId) {
+        const wikiUrl = `https://www.wikidata.org/wiki/${encodeURIComponent(wkdId)}`;
+        $("#wikidataLink").attr("href", wikiUrl).text(wikiUrl).removeClass("d-none");
+      }
+
+      if (isDdbId(identifier)) {
+        const ddbUrl = `https://www.deutsche-digitale-bibliothek.de/organization/${encodeURIComponent(identifier)}`;
+        $("#ddbPortalLink")
+          .attr("href", ddbUrl)
+          .text(ddbUrl)
+          .removeClass("d-none");
+      }
     }
 
     function toggleClearButton() {
@@ -246,6 +276,7 @@
       try {
         const transformed = await loadTransformed(identifier);
         $("#leftXml").val(transformed);
+        updateReferenceLinks(identifier, transformed);
 
         if (isDdbId(identifier)) {
           const ddbXml = await loadDdbSource(identifier);
