@@ -13,12 +13,7 @@ LANG_MAP = {
     "es": "spa",
 }
 
-SECTOR_MAP = {
-    "Q33506": ("http://ddb.vocnet.org/sparte/sparte003", "http://ddb.vocnet.org/sparte/sparte010"),  # museum
-    "Q7075": ("http://ddb.vocnet.org/sparte/sparte001", "http://ddb.vocnet.org/sparte/sparte009"),  # library
-    "Q856584": ("http://ddb.vocnet.org/sparte/sparte002", "http://ddb.vocnet.org/sparte/sparte011"),  # archive
-}
-DEFAULT_SECTOR = "http://ddb.vocnet.org/sparte/sparte003"
+
 
 
 def _first_claim_value(entity: dict[str, Any], pid: str) -> Any:
@@ -40,6 +35,29 @@ def _all_claim_values(entity: dict[str, Any], pid: str) -> list[Any]:
         if datavalue:
             values.append(datavalue.get("value"))
     return values
+
+
+def _all_claims(entity: dict[str, Any], pid: str) -> list[dict[str, Any]]:
+    claims = entity.get("claims", {}).get(pid, [])
+    return [claim for claim in claims if isinstance(claim, dict)]
+
+
+def _snak_value(snak: dict[str, Any]) -> Any:
+    datavalue = snak.get("datavalue")
+    if isinstance(datavalue, dict):
+        return datavalue.get("value")
+    return None
+
+
+def _first_qualifier_value(claim: dict[str, Any], pid: str) -> Any:
+    qualifiers = claim.get("qualifiers", {})
+    qualifier_snaks = qualifiers.get(pid, []) if isinstance(qualifiers, dict) else []
+    for snak in qualifier_snaks:
+        if isinstance(snak, dict):
+            value = _snak_value(snak)
+            if value is not None:
+                return value
+    return None
 
 
 def _entity_id(value: Any) -> str | None:
@@ -79,18 +97,25 @@ def _parse_modified(entity: dict[str, Any]) -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def _pick_sector(entity: dict[str, Any]) -> tuple[str, str | None]:
-    p31_values = _all_claim_values(entity, "P31")
-    for value in p31_values:
-        qid = _entity_id(value)
-        if qid and qid in SECTOR_MAP:
-            return SECTOR_MAP[qid]
-    p452_values = _all_claim_values(entity, "P452")
-    for value in p452_values:
-        qid = _entity_id(value)
-        if qid and qid in SECTOR_MAP:
-            return SECTOR_MAP[qid]
-    return (DEFAULT_SECTOR, None)
+def _label_for_qid(related_entities: dict[str, Any], qid: str) -> str | None:
+    related = related_entities.get(qid, {})
+    labels = related.get("labels", {}) if isinstance(related, dict) else {}
+    for lang in ("de", "en", "fr", "es"):
+        label_obj = labels.get(lang)
+        label = label_obj.get("value") if isinstance(label_obj, dict) else None
+        if label:
+            return str(label)
+    return None
+
+
+def _pick_sector(entity: dict[str, Any], related_entities: dict[str, Any]) -> str | None:
+    for pid in ("P31", "P452"):
+        for value in _all_claim_values(entity, pid):
+            qid = _entity_id(value)
+            if qid:
+                label = _label_for_qid(related_entities, qid) or qid
+                return f"{pid}: {label}"
+    return None
 
 
 def _social_url(username_or_url: str | None, base_url: str) -> str | None:
@@ -124,6 +149,8 @@ def build_intermediate_xml(
 ) -> etree._Element:
     root = etree.Element("intermediate")
 
+    source_ddb_id = f"https://www.deutsche-digitale-bibliothek.de/organization/{source_ddb_id}" if source_ddb_id else None
+
     created = _parse_modified(entity)
     modified = _parse_modified(entity)
 
@@ -135,11 +162,11 @@ def build_intermediate_xml(
     etree.SubElement(root, "status").text = "approved"
     etree.SubElement(root, "recordType").text = "ddb-institution"
     etree.SubElement(root, "id").text = identifier
-    etree.SubElement(root, "wkdId").text = qid
+    etree.SubElement(root, "wkdId").text =  f"https://www.wikidata.org/wiki/{qid}"
 
     org_parent = _entity_id(_first_claim_value(entity, "P749"))
     if org_parent:
-        etree.SubElement(root, "orgParent").text = org_parent
+        etree.SubElement(root, "orgParent").text = f"https://www.wikidata.org/wiki/{org_parent}"
 
     pid_value = _string_value(_first_claim_value(entity, "P791"))
     if pid_value:
@@ -175,10 +202,9 @@ def build_intermediate_xml(
                 item.text = text
                 seen_langs.add(mapped_lang)
 
-    sector, subsector = _pick_sector(entity)
-    etree.SubElement(root, "sector").text = sector
-    if subsector:
-        etree.SubElement(root, "subsector").text = subsector
+    sector = _pick_sector(entity, related_entities)
+    if sector:
+        etree.SubElement(root, "sector").text = sector
 
     descriptions_el = etree.SubElement(root, "descriptions")
     for lang, value in _lang_texts(entity, "descriptions"):
@@ -193,77 +219,103 @@ def build_intermediate_xml(
     if legal_val:
         etree.SubElement(root, "legalStatus").text = legal_val
 
-    address_el = etree.SubElement(root, "address")
-    street = _string_value(_first_claim_value(entity, "P6375"))
-    if street:
-        etree.SubElement(address_el, "street").text = street
+    p159_claims = _all_claims(entity, "P159")
+    addresses_el = etree.SubElement(root, "addresses")
 
-    house = _string_value(_first_claim_value(entity, "P670"))
-    if house:
-        etree.SubElement(address_el, "houseIdentifier").text = house
-
-    postal = _valid_postal_code(_string_value(_first_claim_value(entity, "P281")))
-    if postal:
-        etree.SubElement(address_el, "postalCode").text = postal
-
-    city_qid = _entity_id(_first_claim_value(entity, "P159")) or _entity_id(_first_claim_value(entity, "P131"))
-    state_qid = _entity_id(_first_claim_value(entity, "P131"))
-    country_qid = _entity_id(_first_claim_value(entity, "P17"))
-
-    def _location_node(parent: etree._Element, tag: str, ref_qid: str | None, fallback_label: str) -> None:
+    def _location_node(parent: etree._Element, tag: str, ref_qid: str | None) -> None:
+        if not ref_qid:
+            return
         loc = etree.SubElement(parent, tag)
-        uri = f"https://www.wikidata.org/entity/{ref_qid}" if ref_qid else f"https://www.wikidata.org/entity/{qid}"
-        loc.set("uri", uri)
+        loc.set("uri", f"https://www.wikidata.org/entity/{ref_qid}")
 
-        related = related_entities.get(ref_qid or "", {})
+        related = related_entities.get(ref_qid, {})
         labels = related.get("labels", {}) if isinstance(related, dict) else {}
-        de_label = labels.get("de", {}).get("value") if isinstance(labels.get("de"), dict) else None
-        en_label = labels.get("en", {}).get("value") if isinstance(labels.get("en"), dict) else None
 
-        if de_label:
-            node = etree.SubElement(loc, "label", lang="deu")
-            node.text = str(de_label)
-        if en_label:
-            node = etree.SubElement(loc, "label", lang="eng")
-            node.text = str(en_label)
-        if not de_label and not en_label:
-            node = etree.SubElement(loc, "label", lang="eng")
-            node.text = fallback_label
+        for input_lang, output_lang in LANG_MAP.items():
+            lang_obj = labels.get(input_lang)
+            label_value = lang_obj.get("value") if isinstance(lang_obj, dict) else None
+            if label_value:
+                node = etree.SubElement(loc, "label", lang=output_lang)
+                node.text = str(label_value)
 
-    _location_node(address_el, "city", city_qid, "Unknown city")
-    if state_qid:
-        _location_node(address_el, "state", state_qid, "Unknown state")
-    _location_node(address_el, "country", country_qid, "Unknown country")
+    def _build_address(
+        street: str | None,
+        house: str | None,
+        postal: str | None,
+        city_qid: str | None,
+        state_qid: str | None,
+        country_qid: str | None,
+        coord_val: Any,
+    ) -> None:
+        address_el = etree.SubElement(addresses_el, "address")
 
-    coord_val = _first_claim_value(entity, "P625")
-    if isinstance(coord_val, dict):
-        lat = float(coord_val.get("latitude", 0.0) or 0.0)
-        lon = float(coord_val.get("longitude", 0.0) or 0.0)
-        if lat != 0.0 or lon != 0.0:
-            coordinates_el = etree.SubElement(address_el, "coordinates")
-            etree.SubElement(coordinates_el, "latitude").text = str(lat)
-            etree.SubElement(coordinates_el, "longitude").text = str(lon)
+        if street:
+            etree.SubElement(address_el, "street").text = street
 
-    city_label = None
-    if city_qid:
-        related_city = related_entities.get(city_qid, {})
-        labels = related_city.get("labels", {}) if isinstance(related_city, dict) else {}
-        city_label = (
-            labels.get("de", {}).get("value")
-            or labels.get("en", {}).get("value")
-            or city_qid
-        )
-    loc_parts = []
-    if street:
-        loc_parts.append(street)
-    if postal and city_label:
-        loc_parts.append(f"{postal} {city_label}")
-    elif city_label:
-        loc_parts.append(city_label)
-    elif postal:
-        loc_parts.append(postal)
-    if loc_parts:
-        etree.SubElement(address_el, "locationDisplayName").text = ", ".join(loc_parts)
+        if house:
+            etree.SubElement(address_el, "houseIdentifier").text = house
+
+        if postal:
+            etree.SubElement(address_el, "postalCode").text = postal
+
+        _location_node(address_el, "city", city_qid)
+        if state_qid:
+            _location_node(address_el, "state", state_qid)
+        _location_node(address_el, "country", country_qid)
+
+        if isinstance(coord_val, dict):
+            lat = float(coord_val.get("latitude", 0.0) or 0.0)
+            lon = float(coord_val.get("longitude", 0.0) or 0.0)
+            if lat != 0.0 or lon != 0.0:
+                coordinates_el = etree.SubElement(address_el, "coordinates")
+                etree.SubElement(coordinates_el, "latitude").text = str(lat)
+                etree.SubElement(coordinates_el, "longitude").text = str(lon)
+
+        city_label = None
+        if city_qid:
+            related_city = related_entities.get(city_qid, {})
+            labels = related_city.get("labels", {}) if isinstance(related_city, dict) else {}
+            city_label = (
+                (labels.get("de") or {}).get("value")
+                or (labels.get("en") or {}).get("value")
+                or (labels.get("fr") or {}).get("value")
+                or (labels.get("es") or {}).get("value")
+                or city_qid
+            )
+
+        loc_parts: list[str] = []
+        if street:
+            loc_parts.append(street)
+        if postal and city_label:
+            loc_parts.append(f"{postal} {city_label}")
+        elif city_label:
+            loc_parts.append(city_label)
+        elif postal:
+            loc_parts.append(postal)
+
+        if loc_parts:
+            etree.SubElement(address_el, "locationDisplayName").text = ", ".join(loc_parts)
+
+    if p159_claims:
+        for claim in p159_claims:
+            city_qid = _entity_id(_snak_value(claim.get("mainsnak", {})))
+            street = _string_value(_first_qualifier_value(claim, "P6375"))
+            house = _string_value(_first_qualifier_value(claim, "P670"))
+            postal = _valid_postal_code(_string_value(_first_qualifier_value(claim, "P281")))
+            state_qid = _entity_id(_first_qualifier_value(claim, "P131"))
+            country_qid = _entity_id(_first_qualifier_value(claim, "P17"))
+            coord_val = _first_qualifier_value(claim, "P625")
+            _build_address(street, house, postal, city_qid, state_qid, country_qid, coord_val)
+    else:
+        # Backup path: legacy top-level properties when no P159 statement exists.
+        street = _string_value(_first_claim_value(entity, "P6375"))
+        house = _string_value(_first_claim_value(entity, "P670"))
+        postal = _valid_postal_code(_string_value(_first_claim_value(entity, "P281")))
+        city_qid = _entity_id(_first_claim_value(entity, "P131"))
+        state_qid = _entity_id(_first_claim_value(entity, "P131"))
+        country_qid = _entity_id(_first_claim_value(entity, "P17"))
+        coord_val = _first_claim_value(entity, "P625")
+        _build_address(street, house, postal, city_qid, state_qid, country_qid, coord_val)
 
     email = _string_value(_first_claim_value(entity, "P968"))
     if email:
@@ -302,11 +354,18 @@ def build_intermediate_xml(
 
 def referenced_qids(entity: dict[str, Any]) -> list[str]:
     refs: set[str] = set()
-    for pid in ["P159", "P131", "P17", "P749"]:
+    for pid in ["P159", "P131", "P17", "P749", "P31", "P452"]:
         for value in _all_claim_values(entity, pid):
             qid = _entity_id(value)
             if qid:
                 refs.add(qid)
+
+    for claim in _all_claims(entity, "P159"):
+        for pid in ["P131", "P17"]:
+            qid = _entity_id(_first_qualifier_value(claim, pid))
+            if qid:
+                refs.add(qid)
+
     return sorted(refs)
 
 

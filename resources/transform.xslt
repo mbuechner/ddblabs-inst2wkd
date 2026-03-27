@@ -37,9 +37,8 @@
         <org:abbreviation lang="{ @lang }"><xsl:value-of select="."/></org:abbreviation>
       </xsl:for-each>
 
-      <org:sector><xsl:value-of select="sector"/></org:sector>
-      <xsl:if test="string(subsector)">
-        <org:subsector><xsl:value-of select="subsector"/></org:subsector>
+      <xsl:if test="string(sector)">
+        <org:sector><xsl:value-of select="sector"/></org:sector>
       </xsl:if>
 
       <xsl:for-each select="descriptions/description">
@@ -54,54 +53,60 @@
         <org:legalStatus><xsl:value-of select="legalStatus"/></org:legalStatus>
       </xsl:if>
 
-      <org:address>
-        <xsl:if test="string(address/street)">
-          <org:street><xsl:value-of select="address/street"/></org:street>
-        </xsl:if>
+      <xsl:for-each select="addresses/address">
+        <org:address>
+          <xsl:if test="string(street)">
+            <org:street><xsl:value-of select="street"/></org:street>
+          </xsl:if>
 
-        <xsl:if test="string(address/houseIdentifier)">
-          <org:houseIdentifier><xsl:value-of select="address/houseIdentifier"/></org:houseIdentifier>
-        </xsl:if>
+          <xsl:if test="string(houseIdentifier)">
+            <org:houseIdentifier><xsl:value-of select="houseIdentifier"/></org:houseIdentifier>
+          </xsl:if>
 
-        <xsl:if test="string(address/addressSupplement)">
-          <org:addressSupplement><xsl:value-of select="address/addressSupplement"/></org:addressSupplement>
-        </xsl:if>
+          <xsl:if test="string(addressSupplement)">
+            <org:addressSupplement><xsl:value-of select="addressSupplement"/></org:addressSupplement>
+          </xsl:if>
 
-        <xsl:if test="string(address/postalCode)">
-          <org:postalCode><xsl:value-of select="address/postalCode"/></org:postalCode>
-        </xsl:if>
+          <xsl:if test="string(postalCode)">
+            <org:postalCode><xsl:value-of select="postalCode"/></org:postalCode>
+          </xsl:if>
 
-        <org:city uri="{ address/city/@uri }">
-          <xsl:for-each select="address/city/label">
-            <org:label lang="{ @lang }"><xsl:value-of select="."/></org:label>
-          </xsl:for-each>
-        </org:city>
+          <xsl:if test="city">
+            <org:city uri="{ city/@uri }">
+              <xsl:for-each select="city/label">
+                <org:label lang="{ @lang }"><xsl:value-of select="."/></org:label>
+              </xsl:for-each>
+            </org:city>
+          </xsl:if>
 
-        <xsl:if test="address/state">
-          <org:state uri="{ address/state/@uri }">
-            <xsl:for-each select="address/state/label">
-              <org:label lang="{ @lang }"><xsl:value-of select="."/></org:label>
-            </xsl:for-each>
-          </org:state>
-        </xsl:if>
+          <xsl:if test="state">
+            <org:state uri="{ state/@uri }">
+              <xsl:for-each select="state/label">
+                <org:label lang="{ @lang }"><xsl:value-of select="."/></org:label>
+              </xsl:for-each>
+            </org:state>
+          </xsl:if>
 
-        <org:country uri="{ address/country/@uri }">
-          <xsl:for-each select="address/country/label">
-            <org:label lang="{ @lang }"><xsl:value-of select="."/></org:label>
-          </xsl:for-each>
-        </org:country>
+          <xsl:if test="country">
+            <org:country uri="{ country/@uri }">
+              <xsl:for-each select="country/label">
+                <org:label lang="{ @lang }"><xsl:value-of select="."/></org:label>
+              </xsl:for-each>
+            </org:country>
+          </xsl:if>
 
-        <xsl:if test="address/coordinates">
-          <org:coordinates>
-            <org:latitude><xsl:value-of select="address/coordinates/latitude"/></org:latitude>
-            <org:longitude><xsl:value-of select="address/coordinates/longitude"/></org:longitude>
-          </org:coordinates>
-        </xsl:if>
+          <xsl:if test="coordinates">
+            <org:coordinates>
+              <org:latitude><xsl:value-of select="coordinates/latitude"/></org:latitude>
+              <org:longitude><xsl:value-of select="coordinates/longitude"/></org:longitude>
+            </org:coordinates>
+          </xsl:if>
 
-        <xsl:if test="string(address/locationDisplayName)">
-          <org:locationDisplayName><xsl:value-of select="address/locationDisplayName"/></org:locationDisplayName>
-        </xsl:if>
-      </org:address>
+          <xsl:if test="string(locationDisplayName)">
+            <org:locationDisplayName><xsl:value-of select="locationDisplayName"/></org:locationDisplayName>
+          </xsl:if>
+        </org:address>
+      </xsl:for-each>
 
       <xsl:if test="string(email)">
         <org:email><xsl:value-of select="email"/></org:email>
